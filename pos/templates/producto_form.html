@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<div class="card">
+  <h2 style="margin-top:0">{{ 'Editar producto' if producto else 'Nuevo producto' }}</h2>
+  <form method="post" enctype="multipart/form-data">
+    <label>Nombre *</label>
+    <input name="nombre" value="{{ producto.nombre if producto else '' }}" required>
+
+    <label>Codigo de barras / codigo interno</label>
+    <input name="codigo" id="codigo" value="{{ producto.codigo if producto and producto.codigo else '' }}"
+           placeholder="Escanee con el laser o escriba" autocomplete="off">
+
+    <div class="grid2">
+      <div>
+        <label>Categoria</label>
+        <select name="categoria">
+          <option value="">— sin categoria —</option>
+          {% for c in cats %}
+            <option value="{{ c }}" {{ 'selected' if producto and producto.categoria == c }}>{{ c }}</option>
+          {% endfor %}
+          {% if producto and producto.categoria and producto.categoria not in cats %}
+            <option value="{{ producto.categoria }}" selected>{{ producto.categoria }}</option>
+          {% endif %}
+        </select>
+      </div>
+      <div>
+        <label>Ratio de moneda</label>
+        <select name="ratio_id" id="ratio_id">
+          {% for r in ratios %}
+            <option value="{{ r.id }}"
+              {{ 'selected' if (producto and producto.ratio_id == r.id) or (not producto and defecto and defecto.id == r.id) }}>
+              {{ r.nombre }} (costo x {{ r.valor }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <p class="muted">
+      ¿Falta una categoria o un ratio?
+      <a href="{{ url_for('categorias') }}">Administrar categorias</a> ·
+      <a href="{{ url_for('ratios') }}">Administrar ratios</a>
+    </p>
+
+    <div class="grid2">
+      <div>
+        <label>Costo</label>
+        <input name="costo" id="costo" inputmode="decimal"
+               value="{{ ('%.2f'|format(producto.costo))|replace('.', ',') if producto else '' }}"
+               placeholder="0,00">
+      </div>
+      <div>
+        <label>Precio de venta</label>
+        <input name="precio" id="precio" inputmode="decimal"
+               value="{{ ('%.2f'|format(producto.precio))|replace('.', ',') if producto and producto.precio else '' }}"
+               placeholder="auto: costo x ratio">
+      </div>
+    </div>
+    <p class="muted" id="sugerido"></p>
+
+    <div class="grid2">
+      <div>
+        <label>Stock actual</label>
+        <input name="stock" inputmode="decimal"
+               value="{{ producto.stock|round(1) if producto else '0' }}">
+      </div>
+      <div>
+        <label>Stock minimo (aviso)</label>
+        <input name="stock_min" inputmode="decimal"
+               value="{{ producto.stock_min|round(1) if producto else '0' }}">
+      </div>
+    </div>
+
+    <label>Foto del producto (se comprime automaticamente)</label>
+    <input type="file" name="foto" accept="image/*" capture="environment">
+    {% if producto and producto.foto %}
+      <img class="thumb" style="width:110px;height:110px"
+           src="{{ url_for('foto', nombre=producto.foto) }}" alt="">
+    {% endif %}
+
+    <div class="acciones">
+      <button class="btn btn-verde" type="submit">Guardar</button>
+      <a class="btn btn-gris" href="{{ url_for('productos') }}">Cancelar</a>
+      {% if producto %}
+        <button class="btn btn-rojo" type="submit"
+                formaction="{{ url_for('producto_eliminar', pid=producto.id) }}"
+                onclick="return confirm('¿Eliminar este producto?')">Eliminar</button>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<script>
+const RATIOS = {{ ratios|tojson|safe }};
+const costo = document.getElementById('costo');
+const precio = document.getElementById('precio');
+const selRatio = document.getElementById('ratio_id');
+const sugerido = document.getElementById('sugerido');
+
+function numval(s) {
+  if (!s) return NaN;
+  s = s.trim().replace(/\./g, '').replace(',', '.');
+  return parseFloat(s);
+}
+
+function valorRatio() {
+  const r = RATIOS.find(x => String(x.id) === selRatio.value);
+  return r ? r.valor : 1.3;
+}
+
+function actualizarSugerido() {
+  const c = numval(costo.value);
+  const v = valorRatio();
+  if (isNaN(c)) { sugerido.textContent = ''; return; }
+  const s = (c * v).toFixed(2).replace('.', ',');
+  sugerido.textContent = 'Precio sugerido: costo ' + c + ' x ' + v + ' = $ ' + s;
+  if (!precio.value.trim()) precio.value = s;
+}
+
+costo.addEventListener('input', actualizarSugerido);
+selRatio.addEventListener('change', actualizarSugerido);
+actualizarSugerido();
+
+// el escaner laser teclea el codigo + Enter: lo dejamos en el campo
+document.getElementById('codigo').addEventListener('keydown', e => {
+  if (e.key === 'Enter') e.preventDefault();
+});
+</script>
+{% endblock %}

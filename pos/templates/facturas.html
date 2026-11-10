@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<div class="card">
+  <form method="get" class="grid2">
+    <div><label>Desde</label><input type="date" name="desde" value="{{ desde }}"></div>
+    <div><label>Hasta</label><input type="date" name="hasta" value="{{ hasta }}"></div>
+    <button class="btn" type="submit">Filtrar</button>
+    <a class="btn btn-gris" href="{{ url_for('facturas') }}">Ver todas</a>
+  </form>
+</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>Ticket</th><th>Fecha</th><th>Pago</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    {% for v in ventas %}
+      <tr>
+        <td><b>#{{ '%06d'|format(v.id) }}</b></td>
+        <td>{{ v.fecha }}</td>
+        <td>{{ v.pago }}</td>
+        <td><b>{{ dinero(v.total) }}</b></td>
+        <td>{{ 'ANULADA' if v.estado == 'anulada' else 'OK' }}</td>
+        <td><a class="btn btn-peque" href="{{ url_for('factura_detalle', vid=v.id) }}">Ver</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="muted">No hay facturas en ese periodo.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

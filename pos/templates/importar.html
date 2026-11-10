@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<div class="card">
+  <h2 style="margin-top:0">Importar productos desde CSV</h2>
+  <form method="post" enctype="multipart/form-data">
+    <label>Archivo CSV</label>
+    <input type="file" name="archivo" accept=".csv,.txt" required>
+
+    <label>Ratio de moneda para los productos importados</label>
+    <select name="ratio_id">
+      {% for r in ratios %}
+        <option value="{{ r.id }}" {{ 'selected' if defecto and defecto.id == r.id }}>
+          {{ r.nombre }} (costo x {{ r.valor }})
+        </option>
+      {% endfor %}
+    </select>
+    <p class="muted">Se usa cuando la fila no trae precio ni ratio propio.</p>
+
+    <div class="acciones">
+      <button class="btn btn-verde" type="submit">Importar</button>
+      <a class="btn btn-gris" href="{{ url_for('productos') }}">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Formato del archivo</h3>
+  <p>Una fila por producto, separado por <b>punto y coma (;)</b> o <b>coma (,)</b>:</p>
+  <pre style="background:#eef2f7;padding:10px;border-radius:8px;overflow:auto">codigo;nombre;costo
+7790000000012;Coca Cola 500ml;950
+7790000000029;Agua 600ml;400
+;Producto sin codigo;320,50</pre>
+  <ul class="muted">
+    <li><b>codigo</b>: codigo de barras (opcional — puede quedar vacio)</li>
+    <li><b>nombre</b>: obligatorio</li>
+    <li><b>costo</b>: costo del producto (acepta coma o punto decimal)</li>
+    <li>El <b>precio de venta</b> se calcula solo: <b>costo x ratio</b> (ej: ratio 1,30 → +30%)</li>
+    <li>Columnas opcionales extra, en orden: <b>;precio;stock;categoria;ratio</b></li>
+    <li>La columna <b>ratio</b> acepta el nombre de un ratio (Ej: Mayorista) o un numero (Ej: 1,50)</li>
+    <li>Si el codigo ya existe, el producto se <b>actualiza</b></li>
+    <li>Primera fila con encabezado (codigo;nombre;costo): se saltea sola</li>
+    <li>Las categorias nuevas se registran solas</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Ejemplo con todas las columnas</h3>
+  <pre style="background:#eef2f7;padding:10px;border-radius:8px;overflow:auto">codigo;nombre;costo;precio;stock;categoria;ratio
+7790000000012;Coca Cola 500ml;950;;24;Bebidas;General
+7790000000029;Alfajor;300;500;40;Golosinas;Mayorista</pre>
+  <p class="muted">Si la columna <b>precio</b> viene vacia, se calcula con el ratio.
+     Si viene con valor, se respeta tal cual.</p>
+</div>
+{% endblock %}

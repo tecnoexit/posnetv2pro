@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+{% if bajos %}
+<div class="aviso">
+  <b>Stock bajo:</b>
+  {% for b in bajos %}{{ b.nombre }} ({{ b.stock|round(1) }}){% if not loop.last %}, {% endif %}{% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <label>Buscador / escaner de codigos</label>
+  <input id="buscador" placeholder="Escanee o escriba (busca solo)" autofocus
+         autocomplete="off" autocapitalize="off">
+  <div id="resultados"></div>
+
+  <table id="carrito">
+    <thead><tr><th>Articulo</th><th>Cant</th><th>Importe</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div class="card" style="position:sticky;bottom:8px">
+  <div class="muted">TOTAL</div>
+  <div class="grande" id="total">$ 0,00</div>
+  <div class="grid2">
+    <div>
+      <label>Forma de pago</label>
+      <select id="pago">
+        <option value="efectivo">Efectivo</option>
+        <option value="tarjeta">Tarjeta</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+  </div>
+  <div class="acciones">
+    <button class="btn-verde" style="flex:1" onclick="cobrar(true)">Cobrar e imprimir</button>
+    <button class="btn-naranja" style="flex:1" onclick="cobrar(false)">Cobrar sin imprimir</button>
+    <button class="btn-gris" onclick="vaciar()">Vaciar</button>
+  </div>
+  <div id="mensaje" class="muted" style="margin-top:10px"></div>
+</div>
+
+<style>
+  .res {
+    display: flex; align-items: center; gap: 10px; padding: 9px 8px;
+    border-bottom: 1px solid #e4e9ef; cursor: pointer;
+  }
+  .res:active { background: #eef4fa; }
+  .res img { width: 42px; height: 42px; object-fit: cover; border-radius: 8px; background: #dde4ec; }
+  .res .info { flex: 1; min-width: 0; }
+  .res .info b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+
+<script>
+let carrito = [];
+const buscador = document.getElementById('buscador');
+const resultados = document.getElementById('resultados');
+let ultimaBusqueda = '';
+
+function fmt(v) {
+  return '$ ' + Number(v).toFixed(2).replace('.', ',');
+}
+
+function renderCarrito() {
+  const tb = document.querySelector('#carrito tbody');
+  tb.innerHTML = '';
+  let total = 0;
+  carrito.forEach((it, i) => {
+    total += it.precio * it.cantidad;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${it.nombre}</td>
+      <td>
+        <button class="btn-peque btn-gris" onclick="mas(${i},-1)">-</button>
+        <b>${it.cantidad}</b>
+        <button class="btn-peque btn-gris" onclick="mas(${i},1)">+</button>
+      </td>
+      <td>${fmt(it.precio * it.cantidad)}</td>
+      <td><button class="btn-peque btn-rojo" onclick="quitar(${i})">X</button></td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('total').textContent = fmt(total);
+}
+
+function mas(i, d) {
+  carrito[i].cantidad += d;
+  if (carrito[i].cantidad <= 0) carrito.splice(i, 1);
+  renderCarrito();
+}
+
+function quitar(i) { carrito.splice(i, 1); renderCarrito(); }
+function vaciar() { carrito = []; renderCarrito(); }
+
+function agregar(p, cant) {
+  const ex = carrito.find(x => x.id === p.id);
+  if (ex) ex.cantidad += (cant || 1);
+  else carrito.push({id: p.id, nombre: p.nombre, precio: p.precio, cantidad: cant || 1});
+  renderCarrito();
+}
+
+function agregarYLimpiar(p) {
+  agregar(p);
+  buscador.value = '';
+  resultados.innerHTML = '';
+  ultimaBusqueda = '';
+  buscador.focus();
+}
+
+async function buscar(exacto) {
+  const q = buscador.value.trim();
+  if (!q) { resultados.innerHTML = ''; ultimaBusqueda = ''; return; }
+  ultimaBusqueda = q;
+  const r = await fetch('/api/buscar?q=' + encodeURIComponent(q));
+  const lista = await r.json();
+  if (ultimaBusqueda !== q) return;   // llego una busqueda mas nueva
+  resultados.innerHTML = '';
+
+  // codigo exacto o un solo resultado: agregar directo
+  const exactoMatch = lista.find(p => p.codigo === q);
+  if (exacto && (exactoMatch || lista.length === 1)) {
+    agregarYLimpiar(exactoMatch || lista[0]);
+    return;
+  }
+  if (lista.length === 0) {
+    resultados.innerHTML = '<div class="aviso">Sin resultados para "' + q + '"</div>';
+    return;
+  }
+  lista.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'res';
+    const foto = p.foto ? `<img src="/foto/${p.foto}">` : '<img>';
+    d.innerHTML = `${foto}
+      <div class="info">
+        <b>${p.nombre}</b>
+        <span class="muted">${p.categoria ? p.categoria + ' · ' : ''}${p.codigo || 'sin codigo'} · stock ${p.stock}</span>
+      </div>
+      <b>${fmt(p.precio)}</b>`;
+    d.onclick = () => agregarYLimpiar(p);
+    resultados.appendChild(d);
+  });
+}
+
+// buscador dinamico: resultados mientras se escribe
+let timer = null;
+buscador.addEventListener('input', () => {
+  clearTimeout(timer);
+  timer = setTimeout(() => buscar(false), 120);
+});
+
+buscador.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    clearTimeout(timer);
+    buscar(true);
+  }
+});
+
+async function cobrar(imprimir) {
+  if (carrito.length === 0) { document.getElementById('mensaje').textContent = 'Carrito vacio'; return; }
+  const btn = event.target; btn.disabled = true;
+  try {
+    const r = await fetch('/venta/cobrar', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        items: carrito,
+        pago: document.getElementById('pago').value,
+        imprimir: imprimir
+      })
+    });
+    const res = await r.json();
+    if (res.ok) {
+      document.getElementById('mensaje').textContent =
+        'Venta #' + res.venta_id + ' registrada' + (res.impreso ? ' e impresa' : '') + ' - total ' + fmt(res.total);
+      carrito = [];
+      renderCarrito();
+      buscador.focus();
+    } else {
+      document.getElementById('mensaje').textContent = 'Error: ' + (res.error || 'desconocido');
+    }
+  } catch (e) {
+    document.getElementById('mensaje').textContent = 'Error de conexion';
+  }
+  btn.disabled = false;
+}
+
+renderCarrito();
+</script>
+{% endblock %}

@@ -1,0 +1,4 @@
+﻿*.apk
+*.png
+__pycache__/
+*.pyc

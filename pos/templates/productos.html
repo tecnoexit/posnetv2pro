@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<div class="card">
+  <div class="acciones">
+    <a class="btn btn-verde" href="{{ url_for('producto_nuevo') }}">+ Nuevo</a>
+    <a class="btn btn-naranja" href="{{ url_for('productos_importar') }}">Importar CSV</a>
+    <a class="btn btn-gris" href="{{ url_for('categorias') }}">Categorias</a>
+    <a class="btn btn-gris" href="{{ url_for('ratios') }}">Ratios</a>
+    <form method="get" style="flex:1;display:flex;gap:8px">
+      <input name="q" value="{{ q }}" placeholder="Buscar nombre, codigo o categoria" style="margin:0">
+      <button class="btn">Buscar</button>
+    </form>
+  </div>
+  {% if cats %}
+  <div class="acciones" style="margin-top:10px">
+    <a class="btn btn-peque {{ 'btn' if not cat else 'btn-gris' }}" href="{{ url_for('productos') }}">Todas</a>
+    {% for c in cats %}
+      <a class="btn btn-peque {{ 'btn' if cat == c else 'btn-gris' }}"
+         href="{{ url_for('productos', cat=c) }}">{{ c }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<style>
+  .tabla-prod td, .tabla-prod th { padding: 7px 4px; font-size: 14px; }
+  .tabla-prod .thumb { width: 40px; height: 40px; }
+  .tabla-prod .nom { font-size: 15px; }
+</style>
+
+<div class="card">
+  <table class="tabla-prod">
+    <thead><tr><th></th><th>Producto</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+    <tbody>
+    {% for p in productos %}
+      <tr>
+        <td>
+          {% if p.foto %}
+            <img class="thumb" src="{{ url_for('foto', nombre=p.foto) }}" alt="">
+          {% else %}
+            <div class="thumb"></div>
+          {% endif %}
+        </td>
+        <td class="nom"><b>{{ p.nombre }}</b><br>
+          <span class="muted">{{ p.categoria or 'sin categoria' }} · {{ p.codigo or 'sin codigo' }}<br>
+          costo: {{ dinero(p.costo) }}</span></td>
+        <td><b>{{ dinero(p.precio) }}</b></td>
+        <td class="{{ 'stock-bajo' if p.stock <= p.stock_min }}">{{ p.stock|round(1) }}</td>
+        <td><a class="btn btn-peque" href="{{ url_for('producto_editar', pid=p.id) }}">Editar</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">
+        Todavia no hay productos.
+        <a href="{{ url_for('productos_importar') }}">Importe un CSV</a> o cargue el primero.
+      </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

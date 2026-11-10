@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<div class="card">
+  <h2 style="margin-top:0">Ticket #{{ '%06d'|format(venta.id) }}
+    {% if venta.estado == 'anulada' %}
+      <span class="stock-bajo">— ANULADA</span>
+    {% endif %}
+  </h2>
+  <p class="muted">Fecha: {{ venta.fecha }} &nbsp;·&nbsp; Pago: {{ venta.pago }}</p>
+
+  <form method="post" action="{{ url_for('factura_editar', vid=venta.id) }}">
+    <table>
+      <thead><tr><th>Articulo</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr></thead>
+      <tbody>
+      {% for it in items %}
+        <tr>
+          <td>{{ it.descripcion }}</td>
+          <td><input name="cantidad" value="{{ it.cantidad|round(2)|replace('.0','') }}"
+                     inputmode="decimal" style="width:90px;margin:0"
+                     {{ 'disabled' if venta.estado == 'anulada' }}></td>
+          <td><input name="precio" value="{{ '%.2f'|format(it.precio)|replace('.', ',') }}"
+                     inputmode="decimal" style="width:110px;margin:0"
+                     {{ 'disabled' if venta.estado == 'anulada' }}></td>
+          <td><b>{{ dinero(it.subtotal) }}</b></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <p class="grande" style="text-align:right">TOTAL: {{ dinero(venta.total) }}</p>
+
+    <label>Notas</label>
+    <input name="notas" value="{{ venta.notas or '' }}"
+           {{ 'disabled' if venta.estado == 'anulada' }}>
+
+    {% if venta.estado != 'anulada' %}
+    <div class="acciones">
+      <button class="btn btn-verde" type="submit">Guardar cambios</button>
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  <div class="acciones">
+    <form method="post" action="{{ url_for('factura_imprimir', vid=venta.id) }}">
+      <button class="btn" type="submit">Reimprimir ticket</button>
+    </form>
+    {% if venta.estado != 'anulada' %}
+    <form method="post" action="{{ url_for('factura_anular', vid=venta.id) }}"
+          onsubmit="return confirm('¿Anular esta factura? Se devuelve el stock.')">
+      <button class="btn btn-rojo" type="submit">Anular factura</button>
+    </form>
+    {% endif %}
+    <a class="btn btn-gris" href="{{ url_for('facturas') }}">Volver</a>
+  </div>
+</div>
+{% endblock %}

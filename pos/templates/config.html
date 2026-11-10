@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<div class="card">
+  <h2 style="margin-top:0">Configuracion</h2>
+  <form method="post">
+    <label>Nombre del negocio (aparece en el ticket)</label>
+    <input name="nombre_negocio" value="{{ cfg.get('nombre_negocio','') }}">
+
+    <label>Direccion</label>
+    <input name="direccion" value="{{ cfg.get('direccion','') }}">
+
+    <label>Texto de pie del ticket</label>
+    <input name="pie_ticket" value="{{ cfg.get('pie_ticket','') }}">
+
+    <div class="grid2">
+      <div>
+        <label>WhatsApp de pedidos (con codigo de pais)</label>
+        <input name="whatsapp" inputmode="tel" value="{{ cfg.get('whatsapp','') }}"
+               placeholder="Ej: 5491122334455">
+      </div>
+      <div>
+        <label>Simbolo de moneda</label>
+        <input name="moneda" value="{{ cfg.get('moneda','$') }}">
+      </div>
+    </div>
+
+    <label>Mensaje de WhatsApp (lo ve el cliente al tocar el boton)</label>
+    <input name="whatsapp_mensaje" value="{{ cfg.get('whatsapp_mensaje','') }}"
+           placeholder="Hola! Quiero hacer un pedido:">
+
+    <label>Codificacion del ticket</label>
+    <select name="codificacion">
+      {% for c in ['ascii','cp850','utf8'] %}
+      <option value="{{ c }}" {{ 'selected' if cfg.get('codificacion') == c }}>{{ c }}</option>
+      {% endfor %}
+    </select>
+
+    <div class="acciones">
+      <button class="btn btn-verde" type="submit">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Precios y listas</h3>
+  <p class="muted">El precio de venta se calcula como <b>costo x ratio de moneda</b>.
+     Cada producto puede usar un ratio distinto.</p>
+  <div class="acciones">
+    <a class="btn" href="{{ url_for('ratios') }}">Administrar ratios</a>
+    <a class="btn" href="{{ url_for('categorias') }}">Administrar categorias</a>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Catalogo para clientes</h3>
+  <p class="muted">Pagina publica (solo lectura) con los productos, categorias y un boton
+     flotante de WhatsApp para pedidos. Compartila con sus clientes:</p>
+  <p><b>http://{{ request.host }}/catalogo</b></p>
+  <div class="acciones">
+    <a class="btn btn-verde" href="{{ url_for('catalogo') }}" target="_blank">Ver catalogo</a>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Impresora</h3>
+  <p class="muted">Prueba la impresion y la codificacion de acentos con la configuracion actual.</p>
+  <form method="post" action="{{ url_for('config_test') }}">
+    <button class="btn btn-naranja" type="submit">Imprimir ticket de prueba</button>
+  </form>
+</div>
+{% endblock %}

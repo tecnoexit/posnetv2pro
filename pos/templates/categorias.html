@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block contenido %}
+
+<div class="card">
+  <h2 style="margin-top:0">Categorias</h2>
+  <form method="post" style="display:flex;gap:8px">
+    <input name="nombre" placeholder="Nueva categoria (Ej: Bebidas)" required style="margin:0">
+    <button class="btn btn-verde" type="submit">Crear</button>
+  </form>
+</div>
+
+{% for c in cats %}
+<div class="card" style="padding:12px">
+  <form method="post" action="{{ url_for('categoria_editar', cid=c.id) }}"
+        style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input name="nombre" value="{{ c.nombre }}" style="margin:0;flex:1;min-width:150px">
+    <button class="btn-peque btn" type="submit">Guardar</button>
+    <button class="btn-peque btn-rojo" type="submit"
+            formaction="{{ url_for('categoria_eliminar', cid=c.id) }}"
+            onclick="return confirm('¿Eliminar la categoria {{ c.nombre }}? Los productos quedaran sin categoria.')">
+      Eliminar</button>
+    <span class="muted" style="width:100%">{{ c.cuantos }} producto(s) en esta categoria</span>
+  </form>
+</div>
+{% else %}
+<div class="card"><p class="muted">Todavia no hay categorias. Cree la primera arriba.</p></div>
+{% endfor %}
+
+<p class="muted">Las categorias se usan para filtrar productos y buscar en la pantalla de venta.
+   Al cargar productos (a mano o por CSV) las categorias nuevas se registran solas.</p>
+
+<div class="acciones">
+  <a class="btn btn-gris" href="{{ url_for('productos') }}">Volver a productos</a>
+</div>
+{% endblock %}

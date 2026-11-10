@@ -1,0 +1,95 @@
+#!/bin/bash
+# =====================================================================
+#  ticket-completo - Demuestra TODOS los formatos ESC/POS soportados
+#  Uso:  ticket-completo
+# =====================================================================
+source /usr/local/lib/escpos.sh
+
+escpos_reset_file
+
+# ---------- cabecera ----------
+escpos_init
+escpos_align 1
+escpos_size 2 2
+escpos_text "MI COMERCIO"
+escpos_size 1 1
+escpos_bold 1
+escpos_text "Ticket de demostracion"
+escpos_bold 0
+escpos_text "CIF: B-00000000"
+escpos_rule2
+
+# ---------- cuerpo ----------
+escpos_align 0
+escpos_text "Fecha: $(date +%d/%m/%Y)   Hora: $(date +%H:%M)"
+escpos_text "Ticket: #000123"
+escpos_rule
+
+escpos_cols "CANT  DESCRIPCION" "IMPORTE"
+escpos_rule
+escpos_cols "2     Pan artesano" "3,00"
+escpos_cols "1     Cafe con leche" "2,00"
+escpos_cols "3     Agua mineral" "2,25"
+escpos_rule
+
+# total en negrita + doble tamano
+escpos_align 0
+escpos_bold 1
+escpos_size 1 2
+escpos_cols "TOTAL" "7,25 EUR"
+escpos_size 1 1
+escpos_bold 0
+escpos_text ""
+escpos_cols "  IVA 21% incluido" "1,27"
+escpos_rule2
+
+# ---------- formatos de texto ----------
+escpos_align 1
+escpos_bold 1
+escpos_text "-- FORMATOS DE TEXTO --"
+escpos_bold 0
+escpos_text ""
+escpos_size 1 1; escpos_text "Tamano normal (1x1)"
+escpos_size 2 1; escpos_text "Doble ancho (2x1)"
+escpos_size 1 2; escpos_text "Doble alto (1x2)"
+escpos_size 3 3; escpos_text "Triple (3x3)"
+escpos_size 1 1
+escpos_underline 1; escpos_text "Texto subrayado"; escpos_underline 0
+escpos_bold 1; escpos_text "Texto en negrita"; escpos_bold 0
+escpos_feed 1
+
+# ---------- codigo de barras ----------
+escpos_align 1
+escpos_bold 1
+escpos_text "-- CODIGO DE BARRAS --"
+escpos_bold 0
+escpos_barcode_height 70
+escpos_barcode_width 3
+escpos_barcode_hri 2          # HRI debajo
+escpos_text ""
+escpos_barcode 73 "ABC-1234-XYZ"   # CODE128
+escpos_feed 2
+escpos_text "CODE39:"
+escpos_barcode 69 "SUNMI2026"
+escpos_feed 2
+escpos_text "EAN13:"
+escpos_barcode 67 "123456789012"
+escpos_feed 2
+
+# ---------- QR ----------
+escpos_bold 1
+escpos_text "-- CODIGO QR --"
+escpos_bold 0
+escpos_qr "https://sunmi.com" 7 49
+escpos_feed 1
+escpos_text "QR - Escanee aqui"
+escpos_feed 2
+
+# ---------- corte ----------
+escpos_align 1
+escpos_text "Gracias por su compra"
+escpos_text "Conserve este ticket"
+escpos_feed 2
+escpos_cut 0                  # corte total
+
+escpos_flush

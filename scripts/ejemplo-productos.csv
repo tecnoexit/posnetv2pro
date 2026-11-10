@@ -1,0 +1,6 @@
+codigo;nombre;costo;precio;stock;categoria
+7790000000012;Coca Cola 500ml;950;;24;Bebidas
+7790000000029;Agua Mineral 600ml;400;;30;Bebidas
+7790000000036;Alfajor Triple;300;520;40;Golosinas
+7790000000043;Galletitas Dulces;480;;15;Golosinas
+;Servicio de fotocopia;120,50;;0;Servicios
