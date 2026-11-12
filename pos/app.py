@@ -236,7 +236,7 @@ def imprimir_venta(venta_id):
         return False
     items = db.execute("SELECT * FROM venta_items WHERE venta_id=?", (venta_id,)).fetchall()
     datos = tk.construir_ticket(dict(v), [dict(i) for i in items], cfg_todas(db))
-    ok, _ = tk.enviar_a_imprimir(datos)
+    ok, _ = tk.enviar_a_imprimir(datos, cfg_todas(db))
     return ok
 
 
@@ -738,7 +738,7 @@ def factura_detalle(vid):
 @app.route("/facturas/<int:vid>/imprimir", methods=["POST"])
 def factura_imprimir(vid):
     ok = imprimir_venta(vid)
-    flash("Ticket enviado a la impresora" if ok else "No se pudo imprimir (¿RawBT configurada?)")
+    flash("Ticket enviado a la impresora" if ok else "No se pudo imprimir (revise Config: impresora)")
     return redirect(url_for("factura_detalle", vid=vid))
 
 
@@ -810,7 +810,7 @@ def config():
     db = get_db()
     if request.method == "POST":
         for campo in ("nombre_negocio", "direccion", "pie_ticket", "moneda", "codificacion",
-                      "whatsapp", "whatsapp_mensaje"):
+                      "whatsapp", "whatsapp_mensaje", "impresora_red"):
             db.execute("INSERT OR REPLACE INTO config(clave,valor) VALUES(?,?)",
                        (campo, request.form.get(campo, "")))
         db.commit()
@@ -824,7 +824,7 @@ def config():
 def config_test():
     db = get_db()
     datos = tk.ticket_prueba(cfg_todas(db))
-    ok, msg = tk.enviar_a_imprimir(datos)
+    ok, msg = tk.enviar_a_imprimir(datos, cfg_todas(db))
     flash("Ticket de prueba enviado" if ok else "Fallo al imprimir: " + msg)
     return redirect(url_for("config"))
 

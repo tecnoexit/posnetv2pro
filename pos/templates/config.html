@@ -64,6 +64,15 @@
 
 <div class="card">
   <h3 style="margin-top:0">Impresora</h3>
+  <form method="post">
+    <label>Impresora de red (IP:puerto, tipico 9100) - opcional</label>
+    <input name="impresora_red" value="{{ cfg.get('impresora_red','') }}"
+           placeholder="Ej: 192.168.0.50:9100">
+    <p class="muted">Dejelo vacio para usar la impresora interna (SUNMI/RawBT) si existe.</p>
+    <div class="acciones">
+      <button class="btn btn-verde" type="submit">Guardar</button>
+    </div>
+  </form>
   <p class="muted">Prueba la impresion y la codificacion de acentos con la configuracion actual.</p>
   <form method="post" action="{{ url_for('config_test') }}">
     <button class="btn btn-naranja" type="submit">Imprimir ticket de prueba</button>

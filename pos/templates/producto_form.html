@@ -91,11 +91,11 @@
 </div>
 
 <script>
-const RATIOS = {{ ratios|tojson|safe }};
-const costo = document.getElementById('costo');
-const precio = document.getElementById('precio');
-const selRatio = document.getElementById('ratio_id');
-const sugerido = document.getElementById('sugerido');
+var RATIOS = {{ ratios|tojson|safe }};
+var costo = document.getElementById('costo');
+var precio = document.getElementById('precio');
+var selRatio = document.getElementById('ratio_id');
+var sugerido = document.getElementById('sugerido');
 
 function numval(s) {
   if (!s) return NaN;
@@ -104,26 +104,36 @@ function numval(s) {
 }
 
 function valorRatio() {
-  const r = RATIOS.find(x => String(x.id) === selRatio.value);
-  return r ? r.valor : 1.3;
+  var i, r;
+  for (i = 0; i < RATIOS.length; i++) {
+    r = RATIOS[i];
+    if (String(r.id) === selRatio.value) return r.valor;
+  }
+  return 1.3;
 }
 
 function actualizarSugerido() {
-  const c = numval(costo.value);
-  const v = valorRatio();
+  var c = numval(costo.value);
+  var v = valorRatio();
   if (isNaN(c)) { sugerido.textContent = ''; return; }
-  const s = (c * v).toFixed(2).replace('.', ',');
+  var s = (c * v).toFixed(2).replace('.', ',');
   sugerido.textContent = 'Precio sugerido: costo ' + c + ' x ' + v + ' = $ ' + s;
   if (!precio.value.trim()) precio.value = s;
 }
 
-costo.addEventListener('input', actualizarSugerido);
-selRatio.addEventListener('change', actualizarSugerido);
+costo.addEventListener('input', actualizarSugerido, false);
+costo.addEventListener('keyup', actualizarSugerido, false);
+selRatio.addEventListener('change', actualizarSugerido, false);
 actualizarSugerido();
 
 // el escaner laser teclea el codigo + Enter: lo dejamos en el campo
-document.getElementById('codigo').addEventListener('keydown', e => {
-  if (e.key === 'Enter') e.preventDefault();
-});
+document.getElementById('codigo').addEventListener('keydown', function(e) {
+  e = e || window.event;
+  var tecla = e.key || e.keyCode;
+  if (tecla === 'Enter' || tecla === 13) {
+    if (e.preventDefault) e.preventDefault();
+    return false;
+  }
+}, false);
 </script>
 {% endblock %}

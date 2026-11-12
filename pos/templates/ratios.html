@@ -20,8 +20,8 @@
 
 {% for r in ratios %}
 <div class="card">
-  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-    <h3 style="margin:0;flex:1">{{ r.nombre }}
+  <div>
+    <h3 style="margin:0 0 6px">{{ r.nombre }}
       {% if defecto_id == r.id %}<span class="muted">★ defecto</span>{% endif %}
     </h3>
     <span class="muted">costo x {{ r.valor }} · {{ r.cuantos }} productos</span>

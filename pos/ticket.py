@@ -145,17 +145,45 @@ def ticket_prueba(config):
     return datos.replace(b"\x1b\x40", b"\x1b\x40" + b"PRUEBA DE IMPRESION\n")
 
 
-def enviar_a_imprimir(datos):
-    """Escribe el ticket y lo envia al comando imprimir (RawBT)."""
-    ruta = f"/tmp/ticket_{int(time.time()*1000)}.bin"
-    with open(ruta, "wb") as f:
-        f.write(datos)
-    env = dict(os.environ)
-    env["PATH"] = "/system/bin:/system/xbin:" + env.get("PATH", "")
-    try:
-        r = subprocess.run(["/usr/local/bin/imprimir", ruta],
-                           capture_output=True, text=True, timeout=30, env=env)
-        ok = "OK" in (r.stdout or "")
-        return ok, (r.stdout or "") + (r.stderr or "")
-    except Exception as e:
-        return False, str(e)
+def enviar_a_imprimir(datos, config=None):
+    """
+    Envía el ticket ESC/POS. Orden de intentos:
+      1) Impresora de red: config['impresora_red'] = "host:puerto" (ej: 192.168.0.50:9100)
+      2) Comando local /usr/local/bin/imprimir (SUNMI V2 Pro vía RawBT)
+      3) Mensaje informativo si no hay impresora configurada
+    """
+    config = config or {}
+
+    # 1) impresora de red (ESC/POS raw por TCP, tipico puerto 9100)
+    destino = (config.get("impresora_red") or "").strip()
+    if destino:
+        try:
+            import socket
+            host, _, puerto = destino.partition(":")
+            puerto = int(puerto) if puerto else 9100
+            s = socket.create_connection((host, puerto), timeout=5)
+            try:
+                s.sendall(datos)
+            finally:
+                s.close()
+            return True, f"Enviado a impresora de red {host}:{puerto}"
+        except Exception as e:
+            return False, f"Error con impresora de red {destino}: {e}"
+
+    # 2) comando local (SUNMI: wrapper RawBT)
+    if os.path.exists("/usr/local/bin/imprimir"):
+        ruta = f"/tmp/ticket_{int(time.time()*1000)}.bin"
+        with open(ruta, "wb") as f:
+            f.write(datos)
+        env = dict(os.environ)
+        env["PATH"] = "/system/bin:/system/xbin:" + env.get("PATH", "")
+        try:
+            r = subprocess.run(["/usr/local/bin/imprimir", ruta],
+                               capture_output=True, text=True, timeout=30, env=env)
+            ok = "OK" in (r.stdout or "")
+            return ok, (r.stdout or "") + (r.stderr or "")
+        except Exception as e:
+            return False, str(e)
+
+    return False, ("Sin impresora configurada. Cargue 'impresora_red' en Config "
+                   "(ej: 192.168.0.50:9100) o instale /usr/local/bin/imprimir")

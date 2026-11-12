@@ -20,7 +20,7 @@
   </table>
 </div>
 
-<div class="card" style="position:sticky;bottom:8px">
+<div class="card">
   <div class="muted">TOTAL</div>
   <div class="grande" id="total">$ 0,00</div>
   <div class="grid2">
@@ -35,8 +35,8 @@
     </div>
   </div>
   <div class="acciones">
-    <button class="btn-verde" style="flex:1" onclick="cobrar(true)">Cobrar e imprimir</button>
-    <button class="btn-naranja" style="flex:1" onclick="cobrar(false)">Cobrar sin imprimir</button>
+    <button class="btn-verde" style="width:100%" onclick="cobrar(true, this)">Cobrar e imprimir</button>
+    <button class="btn-naranja" style="width:100%" onclick="cobrar(false, this)">Cobrar sin imprimir</button>
     <button class="btn-gris" onclick="vaciar()">Vaciar</button>
   </div>
   <div id="mensaje" class="muted" style="margin-top:10px"></div>
@@ -44,43 +44,49 @@
 
 <style>
   .res {
-    display: flex; align-items: center; gap: 10px; padding: 9px 8px;
-    border-bottom: 1px solid #e4e9ef; cursor: pointer;
+    padding: 9px 8px; border-bottom: 1px solid #e4e9ef; cursor: pointer;
+    overflow: hidden;
   }
   .res:active { background: #eef4fa; }
-  .res img { width: 42px; height: 42px; object-fit: cover; border-radius: 8px; background: #dde4ec; }
-  .res .info { flex: 1; min-width: 0; }
+  .res img {
+    width: 42px; height: 42px; border-radius: 8px; background: #dde4ec;
+    float: left; margin-right: 10px; object-fit: cover;
+  }
+  .res .info { margin-left: 52px; }
   .res .info b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .res .precio { float: right; margin-left: 8px; }
 </style>
 
 <script>
-let carrito = [];
-const buscador = document.getElementById('buscador');
-const resultados = document.getElementById('resultados');
-let ultimaBusqueda = '';
+var carrito = [];
+var buscador = document.getElementById('buscador');
+var resultados = document.getElementById('resultados');
+var ultimaBusqueda = '';
 
 function fmt(v) {
   return '$ ' + Number(v).toFixed(2).replace('.', ',');
 }
 
 function renderCarrito() {
-  const tb = document.querySelector('#carrito tbody');
+  var tb = document.querySelector('#carrito tbody');
   tb.innerHTML = '';
-  let total = 0;
-  carrito.forEach((it, i) => {
+  var total = 0;
+  var i, it, tr;
+  for (i = 0; i < carrito.length; i++) {
+    it = carrito[i];
     total += it.precio * it.cantidad;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${it.nombre}</td>
-      <td>
-        <button class="btn-peque btn-gris" onclick="mas(${i},-1)">-</button>
-        <b>${it.cantidad}</b>
-        <button class="btn-peque btn-gris" onclick="mas(${i},1)">+</button>
-      </td>
-      <td>${fmt(it.precio * it.cantidad)}</td>
-      <td><button class="btn-peque btn-rojo" onclick="quitar(${i})">X</button></td>`;
+    tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + it.nombre + '</td>' +
+      '<td>' +
+        '<button class="btn-peque btn-gris" onclick="mas(' + i + ',-1)">-</button>' +
+        ' <b>' + it.cantidad + '</b> ' +
+        '<button class="btn-peque btn-gris" onclick="mas(' + i + ',1)">+</button>' +
+      '</td>' +
+      '<td>' + fmt(it.precio * it.cantidad) + '</td>' +
+      '<td><button class="btn-peque btn-rojo" onclick="quitar(' + i + ')">X</button></td>';
     tb.appendChild(tr);
-  });
+  }
   document.getElementById('total').textContent = fmt(total);
 }
 
@@ -93,8 +99,16 @@ function mas(i, d) {
 function quitar(i) { carrito.splice(i, 1); renderCarrito(); }
 function vaciar() { carrito = []; renderCarrito(); }
 
+function buscarEnCarrito(id) {
+  var i;
+  for (i = 0; i < carrito.length; i++) {
+    if (carrito[i].id === id) return carrito[i];
+  }
+  return null;
+}
+
 function agregar(p, cant) {
-  const ex = carrito.find(x => x.id === p.id);
+  var ex = buscarEnCarrito(p.id);
   if (ex) ex.cantidad += (cant || 1);
   else carrito.push({id: p.id, nombre: p.nombre, precio: p.precio, cantidad: cant || 1});
   renderCarrito();
@@ -108,69 +122,93 @@ function agregarYLimpiar(p) {
   buscador.focus();
 }
 
-async function buscar(exacto) {
-  const q = buscador.value.trim();
+function buscar(exacto) {
+  var q = buscador.value.trim();
   if (!q) { resultados.innerHTML = ''; ultimaBusqueda = ''; return; }
   ultimaBusqueda = q;
-  const r = await fetch('/api/buscar?q=' + encodeURIComponent(q));
-  const lista = await r.json();
-  if (ultimaBusqueda !== q) return;   // llego una busqueda mas nueva
-  resultados.innerHTML = '';
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/buscar?q=' + encodeURIComponent(q), true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status !== 200) return;
+    var lista;
+    try { lista = JSON.parse(xhr.responseText); } catch (e) { return; }
+    if (ultimaBusqueda !== q) return;   // llego una busqueda mas nueva
+    resultados.innerHTML = '';
 
-  // codigo exacto o un solo resultado: agregar directo
-  const exactoMatch = lista.find(p => p.codigo === q);
-  if (exacto && (exactoMatch || lista.length === 1)) {
-    agregarYLimpiar(exactoMatch || lista[0]);
-    return;
-  }
-  if (lista.length === 0) {
-    resultados.innerHTML = '<div class="aviso">Sin resultados para "' + q + '"</div>';
-    return;
-  }
-  lista.forEach(p => {
-    const d = document.createElement('div');
-    d.className = 'res';
-    const foto = p.foto ? `<img src="/foto/${p.foto}">` : '<img>';
-    d.innerHTML = `${foto}
-      <div class="info">
-        <b>${p.nombre}</b>
-        <span class="muted">${p.categoria ? p.categoria + ' · ' : ''}${p.codigo || 'sin codigo'} · stock ${p.stock}</span>
-      </div>
-      <b>${fmt(p.precio)}</b>`;
-    d.onclick = () => agregarYLimpiar(p);
-    resultados.appendChild(d);
-  });
+    // codigo exacto o un solo resultado: agregar directo
+    var exactoMatch = null, j;
+    for (j = 0; j < lista.length; j++) {
+      if (lista[j].codigo === q) { exactoMatch = lista[j]; break; }
+    }
+    if (exacto && (exactoMatch || lista.length === 1)) {
+      agregarYLimpiar(exactoMatch || lista[0]);
+      return;
+    }
+    if (lista.length === 0) {
+      resultados.innerHTML = '<div class="aviso">Sin resultados para "' + q + '"</div>';
+      return;
+    }
+    var k, p, d, foto;
+    for (k = 0; k < lista.length; k++) {
+      p = lista[k];
+      d = document.createElement('div');
+      d.className = 'res';
+      foto = p.foto ? '<img src="/foto/' + p.foto + '">' : '<img>';
+      d.innerHTML = foto +
+        '<div class="info">' +
+          '<b>' + p.nombre + '</b>' +
+          '<span class="muted">' + (p.categoria ? p.categoria + ' · ' : '') +
+            (p.codigo || 'sin codigo') + ' · stock ' + p.stock + '</span>' +
+        '</div>' +
+        '<b class="precio">' + fmt(p.precio) + '</b>';
+      d.onclick = (function(prod) {
+        return function() { agregarYLimpiar(prod); };
+      })(p);
+      resultados.appendChild(d);
+    }
+  };
+  xhr.send(null);
 }
 
 // buscador dinamico: resultados mientras se escribe
-let timer = null;
-buscador.addEventListener('input', () => {
+var timer = null;
+function alEscribir() {
   clearTimeout(timer);
-  timer = setTimeout(() => buscar(false), 120);
-});
+  timer = setTimeout(function() { buscar(false); }, 120);
+}
+buscador.addEventListener('input', alEscribir, false);
+buscador.addEventListener('keyup', alEscribir, false);
 
-buscador.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
+buscador.addEventListener('keydown', function(e) {
+  e = e || window.event;
+  var tecla = e.key || e.keyCode;
+  if (tecla === 'Enter' || tecla === 13) {
+    if (e.preventDefault) e.preventDefault();
     clearTimeout(timer);
     buscar(true);
+    return false;
   }
-});
+}, false);
 
-async function cobrar(imprimir) {
+function cobrar(imprimir, btn) {
   if (carrito.length === 0) { document.getElementById('mensaje').textContent = 'Carrito vacio'; return; }
-  const btn = event.target; btn.disabled = true;
-  try {
-    const r = await fetch('/venta/cobrar', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        items: carrito,
-        pago: document.getElementById('pago').value,
-        imprimir: imprimir
-      })
-    });
-    const res = await r.json();
+  btn.disabled = true;
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/venta/cobrar', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    btn.disabled = false;
+    if (xhr.status !== 200) {
+      document.getElementById('mensaje').textContent = 'Error de conexion';
+      return;
+    }
+    var res;
+    try { res = JSON.parse(xhr.responseText); } catch (e) {
+      document.getElementById('mensaje').textContent = 'Error de respuesta';
+      return;
+    }
     if (res.ok) {
       document.getElementById('mensaje').textContent =
         'Venta #' + res.venta_id + ' registrada' + (res.impreso ? ' e impresa' : '') + ' - total ' + fmt(res.total);
@@ -180,10 +218,12 @@ async function cobrar(imprimir) {
     } else {
       document.getElementById('mensaje').textContent = 'Error: ' + (res.error || 'desconocido');
     }
-  } catch (e) {
-    document.getElementById('mensaje').textContent = 'Error de conexion';
-  }
-  btn.disabled = false;
+  };
+  xhr.send(JSON.stringify({
+    items: carrito,
+    pago: document.getElementById('pago').value,
+    imprimir: imprimir
+  }));
 }
 
 renderCarrito();

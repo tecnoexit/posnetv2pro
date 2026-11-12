@@ -7,8 +7,8 @@
     <a class="btn btn-naranja" href="{{ url_for('productos_importar') }}">Importar CSV</a>
     <a class="btn btn-gris" href="{{ url_for('categorias') }}">Categorias</a>
     <a class="btn btn-gris" href="{{ url_for('ratios') }}">Ratios</a>
-    <form method="get" style="flex:1;display:flex;gap:8px">
-      <input name="q" value="{{ q }}" placeholder="Buscar nombre, codigo o categoria" style="margin:0">
+    <form method="get" style="margin-top:8px">
+      <input name="q" value="{{ q }}" placeholder="Buscar nombre, codigo o categoria" style="margin:0 0 8px">
       <button class="btn">Buscar</button>
     </form>
   </div>
